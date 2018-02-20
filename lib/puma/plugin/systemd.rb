@@ -125,6 +125,8 @@ Puma::Plugin.create do
       @stats = stats
     end
 
+    attr_reader :stats
+
     def clustered?
       stats.has_key? "workers"
     end
