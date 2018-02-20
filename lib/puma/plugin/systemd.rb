@@ -3,8 +3,6 @@
 require "json"
 require "puma/plugin"
 
-require_relative "systemd/version"
-
 # Puma systemd plugin
 #
 # Uses systemd notify to let systemd know a little about what puma is doing, so
@@ -269,4 +267,6 @@ Puma::Plugin.create do
       end
     end
   end
+
+  VERSION = "0.1.0"
 end
