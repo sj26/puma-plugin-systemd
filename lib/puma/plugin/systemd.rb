@@ -125,30 +125,30 @@ Puma::Plugin.create do
     end
 
     def clustered?
-      stats.has_key? "workers"
+      @stats.has_key? "workers"
     end
 
     def workers
-      stats.fetch("workers", 1)
+      @stats.fetch("workers", 1)
     end
 
     def booted_workers
-      stats.fetch("booted_workers", 1)
+      @stats.fetch("booted_workers", 1)
     end
 
     def running
       if clustered?
-        stats["worker_status"].map { |s| s["last_status"].fetch("running", 0) }.inject(0, &:+)
+        @stats["worker_status"].map { |s| s["last_status"].fetch("running", 0) }.inject(0, &:+)
       else
-        stats.fetch("running", 0)
+        @stats.fetch("running", 0)
       end
     end
 
     def backlog
       if clustered?
-        stats["worker_status"].map { |s| s["last_status"].fetch("backlog", 0) }.inject(0, &:+)
+        @stats["worker_status"].map { |s| s["last_status"].fetch("backlog", 0) }.inject(0, &:+)
       else
-        stats.fetch("backlog", 0)
+        @stats.fetch("backlog", 0)
       end
     end
 
