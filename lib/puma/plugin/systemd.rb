@@ -28,7 +28,7 @@ Puma::Plugin.create do
   #
   #   https://www.freedesktop.org/software/systemd/man/sd-daemon.html
   #
-  class Systemd
+  class PumaSystemd
     # Do we have a systemctl binary? This is a good indicator whether systemd
     # is installed at all.
     def present?
@@ -119,7 +119,7 @@ Puma::Plugin.create do
   end
 
   # Take puma's stats and construct a sensible status line for Systemd
-  class Status
+  class PumaSystemdStatus
     def initialize(stats)
       @stats = stats
     end
@@ -178,7 +178,7 @@ Puma::Plugin.create do
 
     # Only install hooks if systemd is present, the systemd is booted by
     # systemd, and systemd has asked us to notify it of events.
-    @systemd = Systemd.new
+    @systemd = PumaSystemd.new
     if @systemd.present? && @systemd.booted? && @systemd.notify?
       @launcher.events.debug "systemd: detected running inside systemd, registering hooks"
       register_hooks
@@ -228,7 +228,7 @@ Puma::Plugin.create do
   end
 
   def status
-    Status.new(fetch_stats)
+    PumaSystemdStatus.new(fetch_stats)
   end
 
   # Update systemd status event second or so
