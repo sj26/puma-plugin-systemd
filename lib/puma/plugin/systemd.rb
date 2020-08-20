@@ -152,11 +152,31 @@ Puma::Plugin.create do
       end
     end
 
+    def pool_capacity
+      if clustered?
+        @stats["worker_status"].map { |s| s["last_status"].fetch("pool_capacity", 0) }.inject(0, &:+)
+      else
+        @stats.fetch("pool_capacity", 0)
+      end
+    end
+
+    def max_threads
+      if clustered?
+        if @stats['worker_status'].first
+          @stats["worker_status"].first["last_status"].fetch("max_threads", 0)
+        else
+          0
+        end
+      else
+        @stats.fetch("max_threads", 0)
+      end
+    end
+
     def to_s
       if clustered?
-        "puma #{Puma::Const::VERSION} cluster: #{booted_workers}/#{workers} workers: #{running} threads, #{backlog} backlog"
+        "puma #{Puma::Const::VERSION} cluster: #{booted_workers}/#{workers} workers: #{running}/#{max_threads * workers} threads, #{pool_capacity}/#{max_threads * workers} pool capacity, #{backlog} backlog"
       else
-        "puma #{Puma::Const::VERSION}: #{running} threads, #{backlog} backlog"
+        "puma #{Puma::Const::VERSION}: #{running}/#{max_threads} threads, #{pool_capacity}/#{max_threads} pool capacity, #{backlog} backlog"
       end
     end
   end
