@@ -10,7 +10,115 @@ require "puma/plugin"
 # you know when your system has *actually* started and is ready to take
 # requests.
 #
-Puma::Plugin.create do
+class Puma::Plugin::Systemd
+  Puma::Plugins.register("systemd", self)
+
+  # Puma creates the plugin when encountering `plugin` in the config.
+  def initialize(loader)
+    # This is a Puma::PluginLoader
+    @loader = loader
+  end
+
+  # We can start doing something when we have a launcher:
+  def start(launcher)
+    @launcher = launcher
+
+    # Log relevant ENV in debug
+    @launcher.events.debug "systemd: NOTIFY_SOCKET=#{ENV["NOTIFY_SOCKET"].inspect}"
+    @launcher.events.debug "systemd: WATCHDOG_PID=#{ENV["WATCHDOG_PID"].inspect}"
+    @launcher.events.debug "systemd: WATCHDOG_USEC=#{ENV["WATCHDOG_USEC"].inspect}"
+
+    # Only install hooks if systemd is present, the systemd is booted by
+    # systemd, and systemd has asked us to notify it of events.
+    @systemd = Systemd.new
+    if @systemd.present? && @systemd.booted? && @systemd.notify?
+      @launcher.events.debug "systemd: detected running inside systemd, registering hooks"
+      register_hooks
+    else
+      @launcher.events.debug "systemd: not running within systemd, doing nothing"
+    end
+  end
+
+  private
+
+  # Are we a single process worker, or do we have worker processes?
+  #
+  # Copied from puma, it's private:
+  # https://github.com/puma/puma/blob/v3.6.0/lib/puma/launcher.rb#L267-L269
+  #
+  def clustered?
+    (@launcher.options[:workers] || 0) > 0
+  end
+
+  def register_hooks
+    (@launcher.config.options[:on_restart] ||= []) << method(:restart)
+    @launcher.events.on_booted(&method(:booted))
+    in_background(&method(:status_loop))
+    in_background(&method(:watchdog_loop)) if @systemd.watchdog?
+  end
+
+  def booted
+    @launcher.events.log "* systemd: notify ready"
+    begin
+      @systemd.notify_ready
+    rescue
+      @launcher.events.error "! systemd: notify ready failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
+    end
+  end
+
+  def restart(launcher)
+    @launcher.events.log "* systemd: notify reloading"
+    begin
+      @systemd.notify_reloading
+    rescue
+      @launcher.events.error "! systemd: notify reloading failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
+    end
+  end
+
+  def fetch_stats
+    JSON.parse(@launcher.stats)
+  end
+
+  def status
+    Status.new(fetch_stats)
+  end
+
+  # Update systemd status event second or so
+  def status_loop
+    loop do
+      @launcher.events.debug "systemd: notify status"
+      begin
+        @systemd.notify_status(status.to_s)
+      rescue
+        @launcher.events.error "! systemd: notify status failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
+      ensure
+        sleep 1
+      end
+    end
+  end
+
+  # If watchdog is configured we'll send a ping at about half the timeout
+  # configured in systemd as recommended in the docs.
+  def watchdog_loop
+    @launcher.events.log "* systemd: watchdog detected (#{@systemd.watchdog_usec}usec)"
+
+    # Ruby wants seconds, and the docs suggest notifying halfway through the
+    # timeout.
+    sleep_seconds = @systemd.watchdog_usec / 1000.0 / 1000.0 / 2.0
+
+    loop do
+      begin
+        @launcher.events.debug "systemd: notify watchdog"
+        @systemd.notify_watchdog
+      rescue
+        @launcher.events.error "! systemd: notify watchdog failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
+      ensure
+        @launcher.events.debug "systemd: sleeping #{sleep_seconds}s"
+        sleep sleep_seconds
+      end
+    end
+  end
+
   # Give us a way to talk to systemd.
   #
   # It'd be great to use systemd-notify for the whole shebang, but there's a
@@ -157,112 +265,6 @@ Puma::Plugin.create do
         "puma #{Puma::Const::VERSION} cluster: #{booted_workers}/#{workers} workers: #{running} threads, #{backlog} backlog"
       else
         "puma #{Puma::Const::VERSION}: #{running} threads, #{backlog} backlog"
-      end
-    end
-  end
-
-  # Puma creates the plugin when encountering `plugin` in the config.
-  def initialize(loader)
-    # This is a Puma::PluginLoader
-    @loader = loader
-  end
-
-  # We can start doing something when we have a launcher:
-  def start(launcher)
-    @launcher = launcher
-
-    # Log relevant ENV in debug
-    @launcher.events.debug "systemd: NOTIFY_SOCKET=#{ENV["NOTIFY_SOCKET"].inspect}"
-    @launcher.events.debug "systemd: WATCHDOG_PID=#{ENV["WATCHDOG_PID"].inspect}"
-    @launcher.events.debug "systemd: WATCHDOG_USEC=#{ENV["WATCHDOG_USEC"].inspect}"
-
-    # Only install hooks if systemd is present, the systemd is booted by
-    # systemd, and systemd has asked us to notify it of events.
-    @systemd = Systemd.new
-    if @systemd.present? && @systemd.booted? && @systemd.notify?
-      @launcher.events.debug "systemd: detected running inside systemd, registering hooks"
-      register_hooks
-    else
-      @launcher.events.debug "systemd: not running within systemd, doing nothing"
-    end
-  end
-
-  private
-
-  # Are we a single process worker, or do we have worker processes?
-  #
-  # Copied from puma, it's private:
-  # https://github.com/puma/puma/blob/v3.6.0/lib/puma/launcher.rb#L267-L269
-  #
-  def clustered?
-    (@launcher.options[:workers] || 0) > 0
-  end
-
-  def register_hooks
-    (@launcher.config.options[:on_restart] ||= []) << method(:restart)
-    @launcher.events.on_booted(&method(:booted))
-    in_background(&method(:status_loop))
-    in_background(&method(:watchdog_loop)) if @systemd.watchdog?
-  end
-
-  def booted
-    @launcher.events.log "* systemd: notify ready"
-    begin
-      @systemd.notify_ready
-    rescue
-      @launcher.events.error "! systemd: notify ready failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
-    end
-  end
-
-  def restart(launcher)
-    @launcher.events.log "* systemd: notify reloading"
-    begin
-      @systemd.notify_reloading
-    rescue
-      @launcher.events.error "! systemd: notify reloading failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
-    end
-  end
-
-  def fetch_stats
-    JSON.parse(@launcher.stats)
-  end
-
-  def status
-    Status.new(fetch_stats)
-  end
-
-  # Update systemd status event second or so
-  def status_loop
-    loop do
-      @launcher.events.debug "systemd: notify status"
-      begin
-        @systemd.notify_status(status.to_s)
-      rescue
-        @launcher.events.error "! systemd: notify status failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
-      ensure
-        sleep 1
-      end
-    end
-  end
-
-  # If watchdog is configured we'll send a ping at about half the timeout
-  # configured in systemd as recommended in the docs.
-  def watchdog_loop
-    @launcher.events.log "* systemd: watchdog detected (#{@systemd.watchdog_usec}usec)"
-
-    # Ruby wants seconds, and the docs suggest notifying halfway through the
-    # timeout.
-    sleep_seconds = @systemd.watchdog_usec / 1000.0 / 1000.0 / 2.0
-
-    loop do
-      begin
-        @launcher.events.debug "systemd: notify watchdog"
-        @systemd.notify_watchdog
-      rescue
-        @launcher.events.error "! systemd: notify watchdog failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
-      ensure
-        @launcher.events.debug "systemd: sleeping #{sleep_seconds}s"
-        sleep sleep_seconds
       end
     end
   end
