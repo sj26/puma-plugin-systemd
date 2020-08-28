@@ -53,8 +53,8 @@ class Puma::Plugin::Systemd
   def register_hooks
     (@launcher.config.options[:on_restart] ||= []) << method(:restart)
     @launcher.events.on_booted(&method(:booted))
-    in_background(&method(:status_loop))
-    in_background(&method(:watchdog_loop)) if @systemd.watchdog?
+    Puma::Plugins.add_background(method(:status_loop))
+    Puma::Plugins.add_background(method(:watchdog_loop)) if @systemd.watchdog?
   end
 
   def booted
