@@ -33,7 +33,14 @@ class Puma::Plugin::Systemd
     @systemd = Systemd.new
     if @systemd.booted? && @systemd.notify?
       @launcher.events.debug "systemd: detected running inside systemd, registering hooks"
+
       register_hooks
+
+      # In clustered mode, we can start the status loop early and watch the
+      # workers boot
+      start_status_loop_thread if clustered?
+
+      start_watchdog_loop_thread if @systemd.watchdog?
     else
       @launcher.events.debug "systemd: not running within systemd, doing nothing"
     end
@@ -51,9 +58,8 @@ class Puma::Plugin::Systemd
   end
 
   def register_hooks
-    (@launcher.config.options[:on_restart] ||= []) << method(:restart)
     @launcher.events.on_booted(&method(:booted))
-    Puma::Plugins.add_background(method(:watchdog_loop)) if @systemd.watchdog?
+    (@launcher.config.options[:on_restart] ||= []) << method(:restart)
   end
 
   def booted
@@ -64,7 +70,9 @@ class Puma::Plugin::Systemd
       @launcher.events.error "! systemd: notify ready failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
     end
 
-    Thread.new(&method(:status_loop))
+    # In single mode, we can only start the status loop once the server is
+    # started after booted
+    start_status_loop_thread
   end
 
   def restart(launcher)
@@ -98,6 +106,12 @@ class Puma::Plugin::Systemd
     end
   end
 
+  def start_status_loop_thread
+    # This is basically what Puma::Plugins.add_background / fire_background
+    # does, but at a time of our choosing.
+    @status_loop_thread ||= Thread.new(&method(:status_loop))
+  end
+
   # If watchdog is configured we'll send a ping at about half the timeout
   # configured in systemd as recommended in the docs.
   def watchdog_loop
@@ -118,6 +132,10 @@ class Puma::Plugin::Systemd
         sleep sleep_seconds
       end
     end
+  end
+
+  def start_watchdog_loop_thread
+    @watchdog_loop_thread ||= Thread.new(&method(:watchdog_loop))
   end
 
   # Give us a way to talk to systemd.
