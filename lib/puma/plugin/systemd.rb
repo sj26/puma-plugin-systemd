@@ -264,11 +264,27 @@ class Puma::Plugin::Systemd
       end
     end
 
+    def pool_capacity
+      if clustered?
+        @stats["worker_status"].map { |s| s["last_status"].fetch("pool_capacity", 0) }.inject(0, &:+)
+      else
+        @stats.fetch("pool_capacity", 0)
+      end
+    end
+
+    def max_threads
+      if clustered?
+        @stats["worker_status"].map { |s| s["last_status"].fetch("max_threads", 0) }.inject(0, &:+)
+      else
+        @stats.fetch("max_threads", 0)
+      end
+    end
+
     def to_s
       if clustered?
-        "puma #{Puma::Const::VERSION} cluster: #{booted_workers}/#{workers} workers: #{running} threads, #{backlog} backlog"
+        "puma #{Puma::Const::VERSION} cluster: #{booted_workers}/#{workers} workers: #{running}/#{max_threads} threads, #{pool_capacity} available, #{backlog} backlog"
       else
-        "puma #{Puma::Const::VERSION}: #{running} threads, #{backlog} backlog"
+        "puma #{Puma::Const::VERSION}: #{running}/#{max_threads} threads, #{pool_capacity} available, #{backlog} backlog"
       end
     end
   end
