@@ -7,12 +7,12 @@ WantedBy=default.target
 
 [Service]
 Type=notify
-WorkingDirectory=/puma-plugin-systemd/example
-# Environment=PUMA_DEBUG=1
-# Environment=PUMA_WORKERS=2
-# Environment=PUMA_MIN_THREADS=2
-# Environment=PUMA_MAX_THREADS=4
-ExecStart=/puma-plugin-systemd/bin/puma --debug
+WorkingDirectory=/example
+#Environment=PUMA_DEBUG=1
+#Environment=PUMA_WORKERS=2
+#Environment=PUMA_MIN_THREADS=2
+Environment=PUMA_MAX_THREADS=4
+ExecStart=/example/bin/puma --debug
 ExecReload=/bin/kill -USR1 $MAINPID
 ExecRestart=/bin/kill -USR2 $MAINPID
 WatchdogSec=30
