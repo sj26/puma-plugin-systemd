@@ -53,7 +53,6 @@ class Puma::Plugin::Systemd
   def register_hooks
     (@launcher.config.options[:on_restart] ||= []) << method(:restart)
     @launcher.events.on_booted(&method(:booted))
-    Puma::Plugins.add_background(method(:status_loop))
     Puma::Plugins.add_background(method(:watchdog_loop)) if @systemd.watchdog?
   end
 
@@ -64,6 +63,8 @@ class Puma::Plugin::Systemd
     rescue
       @launcher.events.error "! systemd: notify ready failed:\n  #{$!.to_s}\n  #{$!.backtrace.join("\n    ")}"
     end
+
+    Thread.new(&method(:status_loop))
   end
 
   def restart(launcher)
