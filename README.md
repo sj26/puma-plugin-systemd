@@ -75,8 +75,8 @@ app@web:~$ sudo systemctl status puma.service
 ● puma.service - puma
    Loaded: loaded (/etc/systemd/system/puma.service; enabled; vendor preset: enabled)
    Active: active (running) since Mon 2016-10-24 00:26:55 UTC; 5s ago
- Main PID: 32234 (ruby2.3)
-   Status: "puma 3.6.0 cluster: 2/2 workers: 16 threads, 0 backlog"
+ Main PID: 32234 (ruby2.7)
+   Status: "puma 3.6.0 cluster: 2/2 workers: 8/16 threads, 8 available, 0 backlog"
     Tasks: 10
    Memory: 167.9M
       CPU: 7.150s
