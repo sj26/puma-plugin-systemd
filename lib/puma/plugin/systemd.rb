@@ -28,8 +28,8 @@ class Puma::Plugin::Systemd
     @launcher.events.debug "systemd: WATCHDOG_PID=#{ENV["WATCHDOG_PID"].inspect}"
     @launcher.events.debug "systemd: WATCHDOG_USEC=#{ENV["WATCHDOG_USEC"].inspect}"
 
-    # Only install hooks if systemd is booted by
-    # systemd, and systemd has asked us to notify it of events.
+    # Only install hooks if the system is booted by systemd, and systemd has
+    # asked us to notify it of events.
     @systemd = Systemd.new
     if @systemd.booted? && @systemd.notify?
       @launcher.events.debug "systemd: detected running inside systemd, registering hooks"
