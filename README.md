@@ -31,7 +31,7 @@ Add it to your puma config:
 ```ruby
 # config/puma.rb
 
-bind "http://127.0.0.1:9292"
+bind "tcp://127.0.0.1:9292"
 
 workers 2
 threads 8, 16
