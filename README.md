@@ -118,25 +118,25 @@ release a new version, update the version number in `version.rb`, and then run
 `bundle exec rake release`, which will create a git tag for the version, push
 git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
-### Testing
-
-There are few automated tests yet.
+## Example
 
 There is an `example` directory which contains a Dockerfile and basic
 configuration for testing. To use it:
 
 ```
-# Build an image with systemd and puma configured
-docker build -t puma-plugin-systemd-example -f example/Dockerfile .
+cd example
+
+# Build an image with systemd, puma and the plugin configured
+docker build --tag example .
 
 # Start a new container from the image in the background
-docker run --name puma-plugin-systemd --privileged --detach --rm puma-plugin-systemd
+docker run --name example --privileged --detach --rm example
 
 # Show puma systemd integration
-docker exec puma-plugin-systemd-example systemctl status puma
+docker exec example systemctl status puma
 
 # Stop the container
-docker exec puma-plugin-systemd-example halt
+docker exec example halt
 ```
 
 ## Contributing
