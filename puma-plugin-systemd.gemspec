@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name     = "puma-plugin-systemd"
-  spec.version  = "0.1.4"
+  spec.version  = "0.1.5"
   spec.author   = "Samuel Cochran"
   spec.email    = "sj26@sj26.com"
 
