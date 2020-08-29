@@ -28,10 +28,10 @@ class Puma::Plugin::Systemd
     @launcher.events.debug "systemd: WATCHDOG_PID=#{ENV["WATCHDOG_PID"].inspect}"
     @launcher.events.debug "systemd: WATCHDOG_USEC=#{ENV["WATCHDOG_USEC"].inspect}"
 
-    # Only install hooks if systemd is present, the systemd is booted by
-    # systemd, and systemd has asked us to notify it of events.
+    # Only install hooks if the system is booted by systemd, and systemd has
+    # asked us to notify it of events.
     @systemd = Systemd.new
-    if @systemd.present? && @systemd.booted? && @systemd.notify?
+    if @systemd.booted? && @systemd.notify?
       @launcher.events.debug "systemd: detected running inside systemd, registering hooks"
       register_hooks
     else
@@ -137,29 +137,14 @@ class Puma::Plugin::Systemd
   #   https://www.freedesktop.org/software/systemd/man/sd-daemon.html
   #
   class Systemd
-    # Do we have a systemctl binary? This is a good indicator whether systemd
-    # is installed at all.
-    def present?
-      ENV["PATH"].split(":").any? { |dir| File.exists?(File.join(dir, "systemctl")) }
-    end
-
     # Is the system currently booted with systemd?
-    #
-    # We could check for the systemd run directory directly, but we can't be
-    # absolutely sure of it's location and breaks encapsulation. We can be sure
-    # that systemctl is present on a systemd system and understand whether
-    # systemd is running. The systemd-notify binary actually recommends this.
-    #
-    #   An alternate way to check for this state is to call systemctl(1) with
-    #   the is-system-running command. It will return "offline" if the system
-    #   was not booted with systemd.
     #
     # See also sd_booted:
     #
     #   https://www.freedesktop.org/software/systemd/man/sd_booted.html
     #
     def booted?
-      IO.popen(["systemctl", "is-system-running"], &:read).chomp != "offline"
+      File.directory?("/run/systemd/system/")
     end
 
     # Are we running within a systemd unit that expects us to notify?
