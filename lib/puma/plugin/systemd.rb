@@ -170,9 +170,9 @@ Puma::Plugin.create do
 
     def to_s
       if clustered?
-        "puma #{Puma::Const::VERSION} cluster: #{booted_workers}/#{workers} workers: #{running}/#{max_threads} threads, #{pool_capacity}/#{max_threads} pool capacity, #{backlog} backlog"
+        "puma #{Puma::Const::VERSION} cluster: #{booted_workers}/#{workers} workers: #{running}/#{max_threads} threads, #{pool_capacity} available, #{backlog} backlog"
       else
-        "puma #{Puma::Const::VERSION}: #{running}/#{max_threads} threads, #{pool_capacity}/#{max_threads} pool capacity, #{backlog} backlog"
+        "puma #{Puma::Const::VERSION}: #{running}/#{max_threads} threads, #{pool_capacity} available, #{backlog} backlog"
       end
     end
   end
