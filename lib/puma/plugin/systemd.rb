@@ -14,9 +14,10 @@ class Puma::Plugin::Systemd
   Puma::Plugins.register("systemd", self)
 
   # Puma creates the plugin when encountering `plugin` in the config.
-  def initialize(loader)
+  # Puma 5 removed the parameter as it was unused within the plugin
+  def initialize(loader = nil)
     # This is a Puma::PluginLoader
-    @loader = loader
+    @loader = loader if loader
   end
 
   # We can start doing something when we have a launcher:
@@ -85,7 +86,13 @@ class Puma::Plugin::Systemd
   end
 
   def fetch_stats
-    JSON.parse(@launcher.stats)
+    # In Puma < 5, the stats are JSON string
+    # In Puma 5, the stats are already a hash
+    if @launcher.stats.is_a?(String)
+      JSON.parse(@launcher.stats)
+    else
+      @launcher.stats
+    end
   end
 
   def status
