@@ -57,7 +57,6 @@ User=puma
 WorkingDirectory=/app
 ExecStart=/app/bin/puma -C config/puma.rb -e production
 ExecReload=/bin/kill -USR1 $MAINPID
-ExecRestart=/bin/kill -USR2 $MAINPID
 Restart=always
 KillMode=mixed
 ```
