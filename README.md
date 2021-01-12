@@ -1,3 +1,5 @@
+**⚠️ Systemd support is now [built-in to Puma](https://github.com/puma/puma/blob/master/docs/systemd.md). This plugin is deprecated in favor of the native support.**
+
 # Puma Systemd Plugin
 
 [![Build results](http://img.shields.io/travis/sj26/puma-plugin-systemd/master.svg)](https://travis-ci.org/sj26/puma-plugin-systemd) 
