@@ -5,7 +5,7 @@
 [![Build results](http://img.shields.io/travis/sj26/puma-plugin-systemd/master.svg)](https://travis-ci.org/sj26/puma-plugin-systemd) 
 [![Gem version](http://img.shields.io/gem/v/puma-plugin-systemd.svg)](https://rubygems.org/gems/puma-plugin-systemd)
 
-[Puma][puma] integration with [systemd](systemd) for better daemonising under
+[Puma][puma] integration with [systemd][systemd] for better daemonising under
 modern Linux systemds: notify, status, watchdog.
 
 * Notify systemd when puma has booted and is [ready to handle requests][ready]
